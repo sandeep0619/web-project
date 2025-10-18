@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accident Risk Prediction System</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --success: #4cc9f0;
+            --warning: #f72585;
+            --danger: #e63946;
+            --dark: #1d3557;
+            --light: #f8f9fa;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1d3557, #457b9d);
+            color: #333;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        
+        .dashboard-container {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin: 30px auto;
+            padding: 25px;
+            overflow: hidden;
+        }
+        
+        .header-section {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .risk-indicator {
+            height: 20px;
+            border-radius: 10px;
+            background: linear-gradient(to right, green, yellow, red);
+            margin: 15px 0;
+            position: relative;
+        }
+        
+        .risk-marker {
+            position: absolute;
+            top: -5px;
+            width: 30px;
+            height: 30px;
+            background: white;
+            border: 3px solid var(--dark);
+            border-radius: 50%;
+            transform: translateX(-50%);
+            transition: left 0.5s ease;
+        }
+        
+        .risk-low { color: green; }
+        .risk-medium { color: orange; }
+        .risk-high { color: red; }
+        
+        .factor-card {
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+            height: 100%;
+        }
+        
+        .factor-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .weather-card { background: linear-gradient(135deg, #4cc9f0, #4895ef); color: white; }
+        .road-card { background: linear-gradient(135deg, #f72585, #b5179e); color: white; }
+        .driver-card { background: linear-gradient(135deg, #560bad, #480ca8); color: white; }
+        .vehicle-card { background: linear-gradient(135deg, #f48c06, #e85d04); color: white; }
+        
+        .factor-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .prediction-result {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .risk-score {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .recommendation-box {
+            background: #e9ecef;
+            border-left: 5px solid var(--primary);
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .map-container {
+            height: 300px;
+            background: #ddd;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .simulation-controls {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .history-chart {
+            height: 200px;
+            background: white;
+            border-radius: 10px;
+            margin-top: 20px;
+            padding: 15px;
+        }
+        
+        .slider-value {
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .factor-weight {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .alert-section {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <div class="dashboard-container">
+            <!-- Header Section -->
+            <div class="header-section">
+                <h1><i class="fas fa-car-crash me-2"></i>Accident Risk Prediction System</h1>
+                <p class="lead">Real-time assessment of accident probability based on multiple factors</p>
+            </div>
+            
+            <!-- Risk Indicator -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h3>Overall Accident Risk</h3>
+                    <div class="risk-indicator">
+                        <div class="risk-marker" id="riskMarker"></div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Low</span>
+                        <span>Medium</span>
+                        <span>High</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <!-- Left Column - Input Factors -->
+                <div class="col-md-6">
+                    <h3 class="mb-3">Risk Factors</h3>
+                    
+                    <!-- Weather Conditions -->
+                    <div class="factor-card weather-card">
+                        <div class="factor-icon">
+                            <i class="fas fa-cloud-sun-rain"></i>
+                        </div>
+                        <h5>Weather Conditions</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Visibility (km)</label>
+                            <input type="range" class="form-range" id="visibility" min="0" max="10" step="0.5" value="8">
+                            <div class="d-flex justify-content-between">
+                                <span>Poor (0 km)</span>
+                                <span class="slider-value" id="visibilityValue">8 km</span>
+                                <span>Excellent (10 km)</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Precipitation</label>
+                            <input type="range" class="form-range" id="precipitation" min="0" max="100" value="10">
+                            <div class="d-flex justify-content-between">
+                                <span>None</span>
+                                <span class="slider-value" id="precipitationValue">10%</span>
+                                <span>Heavy</span>
+                            </div>
+                        </div>
+                        <div class="factor-weight">Weight: 25%</div>
+                    </div>
+                    
+                    <!-- Road Conditions -->
+                    <div class="factor-card road-card">
+                        <div class="factor-icon">
+                            <i class="fas fa-road"></i>
+                        </div>
+                        <h5>Road Conditions</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Road Type</label>
+                            <select class="form-select" id="roadType">
+                                <option value="0.1">Highway</option>
+                                <option value="0.3" selected>Urban Road</option>
+                                <option value="0.6">Rural Road</option>
+                                <option value="0.8">Mountain Pass</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Traffic Density</label>
+                            <input type="range" class="form-range" id="traffic" min="0" max="100" value="40">
+                            <div class="d-flex justify-content-between">
+                                <span>Low</span>
+                                <span class="slider-value" id="trafficValue">40%</span>
+                                <span>High</span>
+                            </div>
+                        </div>
+                        <div class="factor-weight">Weight: 30%</div>
+                    </div>
+                    
+                    <!-- Driver Factors -->
+                    <div class="factor-card driver-card">
+                        <div class="factor-icon">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h5>Driver Factors</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Fatigue Level</label>
+                            <input type="range" class="form-range" id="fatigue" min="0" max="100" value="20">
+                            <div class="d-flex justify-content-between">
+                                <span>Alert</span>
+                                <span class="slider-value" id="fatigueValue">20%</span>
+                                <span>Exhausted</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Experience (years)</label>
+                            <input type="range" class="form-range" id="experience" min="0" max="50" value="10">
+                            <div class="d-flex justify-content-between">
+                                <span>Novice (0)</span>
+                                <span class="slider-value" id="experienceValue">10 years</span>
+                                <span>Expert (50)</span>
+                            </div>
+                        </div>
+                        <div class="factor-weight">Weight: 35%</div>
+                    </div>
+                    
+                    <!-- Vehicle Factors -->
+                    <div class="factor-card vehicle-card">
+                        <div class="factor-icon">
+                            <i class="fas fa-car"></i>
+                        </div>
+                        <h5>Vehicle Factors</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Brake Condition</label>
+                            <input type="range" class="form-range" id="brakes" min="0" max="100" value="80">
+                            <div class="d-flex justify-content-between">
+                                <span>Poor</span>
+                                <span class="slider-value" id="brakesValue">80%</span>
+                                <span>Excellent</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tire Wear</label>
+                            <input type="range" class="form-range" id="tires" min="0" max="100" value="30">
+                            <div class="d-flex justify-content-between">
+                                <span>New</span>
+                                <span class="slider-value" id="tiresValue">30%</span>
+                                <span>Worn</span>
+                            </div>
+                        </div>
+                        <div class="factor-weight">Weight: 10%</div>
+                    </div>
+                </div>
+                
+                <!-- Right Column - Results and Visualizations -->
+                <div class="col-md-6">
+                    <!-- Prediction Result -->
+                    <div class="prediction-result">
+                        <h3>Accident Probability</h3>
+                        <div class="risk-score" id="riskScore">24%</div>
+                        <div class="risk-level h4" id="riskLevel">LOW RISK</div>
+                        <div class="progress mt-3" style="height: 20px;">
+                            <div class="progress-bar bg-success" id="riskBar" role="progressbar" style="width: 24%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recommendations -->
+                    <div class="recommendation-box">
+                        <h5><i class="fas fa-lightbulb me-2"></i>Safety Recommendations</h5>
+                        <ul class="mt-3" id="recommendations">
+                            <li>Maintain current speed and safe following distance</li>
+                            <li>Stay alert for unexpected road conditions</li>
+                            <li>Ensure all vehicle systems are functioning properly</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Alert Section -->
+                    <div class="alert-section">
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert" id="alertBox">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Warning:</strong> Moderate risk detected. Exercise additional caution.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    </div>
+                    
+                    <!-- Risk History Chart -->
+                    <div class="history-chart">
+                        <h5>Risk History</h5>
+                        <canvas id="riskChart" width="400" height="150"></canvas>
+                    </div>
+                    
+                    <!-- Simulation Controls -->
+                    <div class="simulation-controls">
+                        <h5>Scenario Simulation</h5>
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+                            <button class="btn btn-outline-primary me-md-2" id="clearScenario">
+                                <i class="fas fa-undo me-1"></i>Clear
+                            </button>
+                            <button class="btn btn-primary" id="simulateScenario">
+                                <i class="fas fa-play me-1"></i>Simulate
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- High Risk Locations Map -->
+                    <div class="map-container mt-4">
+                        <h5 class="p-3">High Risk Locations</h5>
+                        <div id="riskMap" style="height: 100%; background: #a8dadc; border-radius: 0 0 10px 10px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap & Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        // DOM Elements
+        const riskMarker = document.getElementById('riskMarker');
+        const riskScore = document.getElementById('riskScore');
+        const riskLevel = document.getElementById('riskLevel');
+        const riskBar = document.getElementById('riskBar');
+        const recommendations = document.getElementById('recommendations');
+        const alertBox = document.getElementById('alertBox');
+        
+        // Input elements
+        const visibility = document.getElementById('visibility');
+        const visibilityValue = document.getElementById('visibilityValue');
+        const precipitation = document.getElementById('precipitation');
+        const precipitationValue = document.getElementById('precipitationValue');
+        const roadType = document.getElementById('roadType');
+        const traffic = document.getElementById('traffic');
+        const trafficValue = document.getElementById('trafficValue');
+        const fatigue = document.getElementById('fatigue');
+        const fatigueValue = document.getElementById('fatigueValue');
+        const experience = document.getElementById('experience');
+        const experienceValue = document.getElementById('experienceValue');
+        const brakes = document.getElementById('brakes');
+        const brakesValue = document.getElementById('brakesValue');
+        const tires = document.getElementById('tires');
+        const tiresValue = document.getElementById('tiresValue');
+        
+        // Buttons
+        const clearScenario = document.getElementById('clearScenario');
+        const simulateScenario = document.getElementById('simulateScenario');
+        
+        // Initialize slider values
+        updateSliderValues();
+        
+        // Add event listeners to all sliders and inputs
+        const inputs = [
+            visibility, precipitation, roadType, traffic, 
+            fatigue, experience, brakes, tires
+        ];
+        
+        inputs.forEach(input => {
+            input.addEventListener('input', function() {
+                updateSliderValues();
+                calculateRisk();
+            });
+        });
+        
+        // Initialize Chart.js
+        const ctx = document.getElementById('riskChart').getContext('2d');
+        const riskChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['10:00', '10:15', '10:30', '10:45', '11:00', '11:15', '11:30'],
+                datasets: [{
+                    label: 'Accident Risk %',
+                    data: [18, 22, 25, 30, 24, 20, 22],
+                    borderColor: '#4361ee',
+                    backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+        
+        // Function to update slider value displays
+        function updateSliderValues() {
+            visibilityValue.textContent = `${visibility.value} km`;
+            precipitationValue.textContent = `${precipitation.value}%`;
+            trafficValue.textContent = `${traffic.value}%`;
+            fatigueValue.textContent = `${fatigue.value}%`;
+            experienceValue.textContent = `${experience.value} years`;
+            brakesValue.textContent = `${brakes.value}%`;
+            tiresValue.textContent = `${tires.value}%`;
+        }
+        
+        // Function to calculate accident risk
+        function calculateRisk() {
+            // Normalize values and apply weights
+            const weatherRisk = (
+                (1 - visibility.value / 10) * 0.6 + 
+                (precipitation.value / 100) * 0.4
+            ) * 0.25;
+            
+            const roadRisk = (
+                parseFloat(roadType.value) + 
+                (traffic.value / 100) * 0.7
+            ) * 0.3;
+            
+            const driverRisk = (
+                (fatigue.value / 100) * 0.7 + 
+                (1 - experience.value / 50) * 0.3
+            ) * 0.35;
+            
+            const vehicleRisk = (
+                (1 - brakes.value / 100) * 0.6 + 
+                (tires.value / 100) * 0.4
+            ) * 0.1;
+            
+            // Calculate total risk (0-1 scale)
+            let totalRisk = weatherRisk + roadRisk + driverRisk + vehicleRisk;
+            
+            // Convert to percentage
+            let riskPercentage = Math.min(Math.round(totalRisk * 100), 100);
+            
+            // Update UI
+            updateRiskDisplay(riskPercentage);
+        }
+        
+        // Function to update risk display
+        function updateRiskDisplay(riskPercentage) {
+            // Update risk score
+            riskScore.textContent = `${riskPercentage}%`;
+            
+            // Update progress bar
+            riskBar.style.width = `${riskPercentage}%`;
+            
+            // Update risk level and color
+            let riskClass = 'risk-low';
+            let alertClass = 'alert-success';
+            let riskText = 'LOW RISK';
+            
+            if (riskPercentage >= 70) {
+                riskClass = 'risk-high';
+                alertClass = 'alert-danger';
+                riskText = 'HIGH RISK';
+                riskBar.className = 'progress-bar bg-danger';
+            } else if (riskPercentage >= 40) {
+                riskClass = 'risk-medium';
+                alertClass = 'alert-warning';
+                riskText = 'MODERATE RISK';
+                riskBar.className = 'progress-bar bg-warning';
+            } else {
+                riskBar.className = 'progress-bar bg-success';
+            }
+            
+            riskLevel.textContent = riskText;
+            riskLevel.className = `risk-level h4 ${riskClass}`;
+            
+            // Update risk marker position
+            riskMarker.style.left = `${riskPercentage}%`;
+            
+            // Update alert box
+            alertBox.className = `alert ${alertClass} alert-dismissible fade show`;
+            
+            // Update recommendations based on risk level
+            updateRecommendations(riskPercentage);
+        }
+        
+        // Function to update safety recommendations
+        function updateRecommendations(riskPercentage) {
+            recommendations.innerHTML = '';
+            
+            if (riskPercentage >= 70) {
+                recommendations.innerHTML = `
+                    <li>Consider postponing travel if possible</li>
+                    <li>Reduce speed significantly and increase following distance</li>
+                    <li>Take frequent breaks if driving long distances</li>
+                    <li>Ensure vehicle is in optimal condition before driving</li>
+                `;
+                alertBox.innerHTML = `
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>High Risk Alert:</strong> Consider alternative travel options or extreme caution.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+            } else if (riskPercentage >= 40) {
+                recommendations.innerHTML = `
+                    <li>Reduce speed and increase following distance</li>
+                    <li>Stay alert for changing road conditions</li>
+                    <li>Avoid distractions while driving</li>
+                    <li>Check vehicle systems before continuing</li>
+                `;
+                alertBox.innerHTML = `
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Moderate Risk:</strong> Exercise additional caution.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+            } else {
+                recommendations.innerHTML = `
+                    <li>Maintain current speed and safe following distance</li>
+                    <li>Stay alert for unexpected road conditions</li>
+                    <li>Ensure all vehicle systems are functioning properly</li>
+                `;
+                alertBox.innerHTML = `
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Low Risk:</strong> Conditions are generally safe for travel.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+            }
+        }
+        
+        // Scenario simulation
+        simulateScenario.addEventListener('click', function() {
+            // Set values for a high-risk scenario
+            visibility.value = 2;
+            precipitation.value = 80;
+            roadType.value = 0.8;
+            traffic.value = 85;
+            fatigue.value = 75;
+            experience.value = 2;
+            brakes.value = 40;
+            tires.value = 80;
+            
+            updateSliderValues();
+            calculateRisk();
+        });
+        
+        // Clear scenario
+        clearScenario.addEventListener('click', function() {
+            // Reset to default values
+            visibility.value = 8;
+            precipitation.value = 10;
+            roadType.value = 0.3;
+            traffic.value = 40;
+            fatigue.value = 20;
+            experience.value = 10;
+            brakes.value = 80;
+            tires.value = 30;
+            
+            updateSliderValues();
+            calculateRisk();
+        });
+        
+        // Initialize risk calculation
+        calculateRisk();
+    </script>
+</body>
+</html>
